@@ -1,0 +1,62 @@
+<html>
+<head>
+  <title>Express HTML</title>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/css/bootstrap-theme.min.css">
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/js/bootstrap.min.js"></script>
+  <script src="https://canvasjs.com/assets/script/canvasjs.min.js"></script>
+  <script>
+    window.numbers = '<%- items %>';
+    window.onload = function() {
+      var chart = new CanvasJS.Chart("chartContainer", {
+        theme: "light1", // "light1", "light2", "dark1", "dark2"
+        animationEnabled: true,
+        title: {
+          text: "Hotel Prices for New York, NY"
+        },
+        axisY: {
+          title: "Price(USD)",
+          prefix: "$",
+          includeZero: false
+        },
+        data: [{
+          xValueType: "dateTime",
+          color: "#BADA55",
+          type: "rangeColumn",
+          yValueFormatString: "$#,##0.00",
+          xValueFormatString: "DDD D MMM YYYY",
+          toolTipContent: "{x}<br><strong>High</strong>: {y[0]}<br>Low: {y[1]}",
+          dataPoints: JSON.parse(window.numbers).map(function(date) {
+            date.x = new Date(date.x)
+            console.log(date);
+            return date
+          })
+        }]
+      });
+      chart.render();
+
+    }
+  </script>
+</head>
+<body>
+<div style="margin:100px;">
+  <nav class="navbar navbar-inverse navbar-static-top">
+    <div class="container">
+      <a class="navbar-brand" href="/">Express HTML</a>
+      <ul class="nav navbar-nav">
+        <li class="active">
+          <a href="/listing">Listing</a>
+        </li>
+        <li class="">
+          <a href="/detail">Detail</a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+  <div class="jumbotron" style="padding:40px;">
+    <div id="chartContainer" style="height: 300px; width: 100%;"></div>
+  </div>
+</div>
+</body>
+</html>
