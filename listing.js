@@ -2,7 +2,7 @@ const axios = require('axios');
 const async = require('async');
 const moment = require('moment');
 const _ = require('lodash')
-
+axios.defaults.headers.post['Content-Type'] = 'application/json';
 const reqHotels = function(arr, num) {
   var a = [];
   for (var i = 0; i <= num; i++) {
@@ -27,28 +27,36 @@ const tasks = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19
   return function(callback) {
     const checkIn = moment().add(index, 'days').format('YYYYMMDD');
     const checkOut = moment().add(item, 'days').format('YYYYMMDD')
-    const url = `https://www.priceline.com/pws/v0/stay/integratedlisting/3000015284?check-in=${checkIn}&check-out=${checkOut}&cityId=3000016152&product-types=RTL&response-options=DETAILED_HOTEL&rooms=1&SORTBY=HDR`
+    const url = `https://www.priceline.com/pws/v0/stay/integratedlisting/3000015284?check-in=${checkIn}&check-out=${checkOut}&offset=0&page-size=300&cityId=3000016152&product-types=RTL&response-options=DETAILED_HOTEL&rooms=1&SORTBY=HDR`
     axios.get(url)
       .then(function(response) {
         const hotels = response.data.hotels;
 
         const maxPriceAllHotels = maxBy(hotels);
         const minPriceAllHotel = minBy(hotels);
-        const maxPriceReqHotel = maxBy(reqHotels(hotels, 15));
-        const mixPriceReqHotel = minBy(reqHotels(hotels, 15));
-
-        //callback(null, {
-        //  x: new moment(checkIn, 'YYYYMMDD'),
-        //  y: [parseInt(maxPriceHotel), parseInt(minPriceHotel)]
-        //})
+        //const maxPriceReqHotel = maxBy(reqHotels(hotels, 15));
+        //const mixPriceReqHotel = minBy(reqHotels(hotels, 15));
 
         callback(null, {
-          date: new moment(checkIn, 'YYYYMMDD'),
-          maxHotelPrice: maxPriceAllHotels,
-          minHotelPrice: minPriceAllHotel,
-          maxReqHotelPrice: maxPriceReqHotel,
-          minReqHotelPrice: mixPriceReqHotel
+          x: new moment(checkIn, 'YYYYMMDD'),
+          y: [parseInt(maxPriceAllHotels), parseInt(minPriceAllHotel)]
         })
+
+        //callback(null, {
+        //  date: new moment(checkIn, 'YYYYMMDD'),
+        //  maxHotelPrice: maxPriceAllHotels,
+        //  minHotelPrice: minPriceAllHotel,
+        //  maxReqHotelPrice: maxPriceReqHotel,
+        //  minReqHotelPrice: mixPriceReqHotel
+        //})
+
+        console.log(hotels.length);
+
+        axios({
+          method: 'post',
+          url: 'http://0.0.0.0:3232/hotel',
+          data: {hotels: hotels}
+        });
 
       })
       .catch(function(error) {
