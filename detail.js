@@ -2,22 +2,53 @@ const axios = require('axios');
 const async = require('async');
 const moment = require('moment');
 
-const tasks = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30].map(function(item, index) {
-  return function(callback) {
-    const checkIn = moment().add(index, 'days').format('YYYYMMDD');
-    const checkOut = moment().add(item, 'days').format('YYYYMMDD')
-    const url = `https://www.priceline.com/pws/v0/stay/integratedlisting/detail/41249?adult-occ=2&cguid=834794b14f2141b3a1366b1fd1cfff86&check-in=${checkIn}&check-out=${checkOut}&currency=USD&rate-display-option=S&response-options=POP_COUNT,RATE_SUMMARY&rooms=1`
-    axios.get(url)
-      .then(function(response) {
-        callback(null, `CHECK-IN: ${checkIn} - ${response.data.hotel.ratesSummary.minPrice}`)
-      })
-      .catch(function(error) {
-        console.log(error);
-        callback(error, null)
-      });
-  }
-})
+const generateDaysOfTasks = ({days, hotelId}) => {
+  var tasks = []
+  for (let i = 1; i <= days; i++) {
+    tasks.push((cb)=> {
+      const checkIn = moment().add(i, 'days').format('YYYYMMDD');
+      const checkOut = moment().add(i + 1, 'days').format('YYYYMMDD')
+      const url = `https://www.priceline.com/pws/v0/stay/integratedlisting/detail/${hotelId}?adult-occ=2&cguid=834794b14f2141b3a1366b1fd1cfff86&check-in=${checkIn}&check-out=${checkOut}&currency=USD&rate-display-option=S&response-options=POP_COUNT,RATE_SUMMARY&rooms=1`
+      axios.get(url)
+        .then(function(response) {
+          const hotel = response.data.hotel;
+          //const maxPriceAllHotels = maxBy(hotels);
+          //const minPriceAllHotel = minBy(hotels);
+          //const maxPriceReqHotel = maxBy(reqHotels(hotels, 15));
+          //const mixPriceReqHotel = minBy(reqHotels(hotels, 15));
 
-async.parallel(tasks, function(err, result) {
-  console.log(result.sort())
-})
+          cb(null, {
+            hotelName: hotel.name,
+            x: new moment(checkIn, 'YYYYMMDD'),
+            y: [parseInt(hotel.ratesSummary.minPrice), 0]
+          })
+
+          //callback(null, {
+          //  date: new moment(checkIn, 'YYYYMMDD'),
+          //  maxHotelPrice: maxPriceAllHotels,
+          //  minHotelPrice: minPriceAllHotel,
+          //  maxReqHotelPrice: maxPriceReqHotel,
+          //  minReqHotelPrice: mixPriceReqHotel
+          //})
+
+          axios({
+            method: 'post',
+            url: 'http://0.0.0.0:3232/hotel',
+            data: {hotel: hotel}
+          });
+        })
+        .catch(function(error) {
+          cb(error, null)
+        });
+    })
+  }
+  return tasks;
+}
+
+const call = function(callback, props) {
+  return async.parallel(generateDaysOfTasks(props), function(err, result) {
+    callback(result)
+  })
+}
+
+module.exports = call
