@@ -2,6 +2,7 @@ const axios = require('axios');
 const async = require('async');
 const moment = require('moment');
 const _ = require('lodash')
+const r = require('rethinkdb')
 
 axios.defaults.headers.post['Content-Type'] = 'application/json';
 
@@ -35,14 +36,15 @@ const generateDaysOfTasks = ({days, cityId}) => {
       axios.get(url)
         .then(function(response) {
           const hotels = response.data.hotels;
-          const maxPriceAllHotels = maxBy(hotels);
-          const minPriceAllHotel = minBy(hotels);
+          //const maxPriceAllHotels = maxBy(hotels);
+          //const minPriceAllHotel = minBy(hotels);
           //const maxPriceReqHotel = maxBy(reqHotels(hotels, 15));
           //const mixPriceReqHotel = minBy(reqHotels(hotels, 15));
 
           cb(null, {
-            x: new moment(checkIn, 'YYYYMMDD'),
-            y: [parseInt(maxPriceAllHotels), parseInt(minPriceAllHotel)]
+            hotels: hotels,
+            checkIn: new moment(checkIn, 'YYYYMMDD').toDate(),
+            checkOut: new moment(checkOut, 'YYYYMMDD').toDate()
           })
 
           //callback(null, {
@@ -53,12 +55,6 @@ const generateDaysOfTasks = ({days, cityId}) => {
           //  minReqHotelPrice: mixPriceReqHotel
           //})
 
-          axios({
-            method: 'post',
-            url: 'http://0.0.0.0:3232/hotels',
-            data: {hotels: hotels, checkIn: new moment(checkIn, 'YYYYMMDD').toDate(), checkOut: new moment(checkOut, 'YYYYMMDD').toDate()}
-          });
-
         })
         .catch(function(error) {
           cb(error, null)
@@ -68,10 +64,41 @@ const generateDaysOfTasks = ({days, cityId}) => {
   return tasks;
 }
 
-const call = function(callback, props) {
-  return async.parallel(generateDaysOfTasks(props), function(err, result) {
-    callback(result)
+const getByCityIdForNumOfDaysGrouped = function(req, res, next) {
+  r.table('hotel').filter(r.row('cityId').eq(req.params.cityId)).group('checkIn','checkOut').run(req._rdbConn).then((data)=> {
+      res.send(data)
+    }).catch((err)=> {
+      next(err)
+    }).finally(next)
+}
+
+const loadData = (req, res, next)=> {
+  return async.parallel(generateDaysOfTasks(req.params), function(err, results) {
+    results.forEach((result) => {
+      const hotels = result.hotels.map(hotel => {
+        return {
+          checkIn: result.checkIn,
+          checkOut: result.checkOut,
+          hotelId: hotel.hotelId,
+          hotelName: hotel.name,
+          brandId: hotel.brandId,
+          starRating: hotel.starRating,
+          neighborhoodId: hotel.location.neighborhoodId,
+          neighborhoodName: hotel.location.neighborhoodName,
+          cityId: hotel.location.cityId.toString(),
+          overallGuestRating: hotel.overallGuestRating,
+          minPrice: parseFloat(hotel.ratesSummary.minPrice),
+          htlDealScore: hotel.htlDealScore || null
+        }
+      });
+      r.table('hotel').insert(hotels).run(req._rdbConn).then((data)=> {
+
+      }).catch((err)=> {
+        next(err)
+      }).finally(next)
+    })
+    res.send(results)
   })
 }
 
-module.exports = call
+module.exports = {getByCityIdForNumOfDaysGrouped, loadData}

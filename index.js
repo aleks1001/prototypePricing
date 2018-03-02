@@ -2,36 +2,40 @@ var bodyParser = require('body-parser')
 var express = require("express");
 var app = express();
 var path = require("path");
+var r = require('rethinkdb')
 
 const listing = require('./listing')
 const detail = require('./detail')
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: false}));
+app.use(createConnection);
 
 app.set('view engine', 'ejs')
-app.get('/listing/:cityId/:days', (req, res) => {
-  listing(function(result) {
-    res.render('index', {items: JSON.stringify(result)})
-  }, {
-    days: req.params.days,
-    cityId: req.params.cityId
-  })
-})
+app.get('/create/:cityId/:days', listing.loadData)
+app.get('/listing/:cityId/:days', listing.getByCityIdForNumOfDaysGrouped)
+app.get('/detail/:hotelId/:days', detail.getByHotelIdForDays)
 
-app.get('/detail/:hotelId/:days', (req, res) => {
-  detail(function(result) {
-    res.render('index', {items: JSON.stringify(result)})
-  }, {
-    days: req.params.days,
-    hotelId: req.params.hotelId
-  });
-})
+startExpress()
 
-app.get('/', (req, res) => {
-  res.redirect('/listing/30')
-})
+function createConnection(req, res, next) {
+  r.connect({
+    host: 'localhost',
+    port: 28015,
+    db: 'test'
+  }).then(function(conn) {
+    req._rdbConn = conn;
+    next();
+  }).error(handleError(res));
+}
 
-app.listen(9090)
+function handleError(res) {
+  return function(error) {
+    res.send(500, {error: error.message});
+  }
+}
 
-console.log('listening on port 9090')
+function startExpress() {
+  app.listen(9099);
+  console.log('Listening on port 9099');
+}
