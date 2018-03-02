@@ -53,12 +53,21 @@ const call = function(callback, props) {
 }
 
 const getByHotelIdForDays = (req, res, next)=> {
-  r.table('hotel').filter({hotelId:req.params.hotelId}).orderBy('checkIn').limit(parseInt(req.params.days)).run(req._rdbConn).then((data)=> {
-    res.send(data)
-  }).catch((err)=> {
-    console.log(err);
-    next(err)
-  }).finally(next)
+  console.log(req.query, req.params);
+  r.map(
+    r.table('hotel').filter({'hotelId': req.params.hotelId}).orderBy('checkIn'), function(hotel) {
+      return {
+        'checkIn': hotel('checkIn'),
+        'minHotelPrice': 0,
+        'maxHotelPrice': hotel('price'),
+        'maxRecHotelPrice': 0,
+        'micRecHotelPrice': 0
+      }
+    }).coerceTo('array').run(req._rdbConn).then((data)=> {
+      res.send(data)
+    }).catch((err)=> {
+      next(err)
+    })
 }
 
 module.exports = {call, getByHotelIdForDays}
