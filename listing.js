@@ -32,7 +32,7 @@ const generateDaysOfTasks = ({days, cityId}) => {
     tasks.push((cb)=> {
       const checkIn = moment().add(i, 'days').format('YYYYMMDD');
       const checkOut = moment().add(i + 1, 'days').format('YYYYMMDD')
-      const url = `https://www.priceline.com/pws/v0/stay/integratedlisting/${cityId}?check-in=${checkIn}&check-out=${checkOut}&page-size=400&product-types=RTL&response-options=DETAILED_HOTEL&rooms=1&SORT=HDR&unlock-deals=true`
+      const url = `https://www.priceline.com/pws/v0/stay/integratedlisting/${cityId}?check-in=${checkIn}&check-out=${checkOut}&page-size=100&product-types=RTL&response-options=DETAILED_HOTEL&rooms=1&SORT=HDR&unlock-deals=true`
 
       axios.get(url)
         .then(function(response) {
@@ -55,11 +55,14 @@ const generateDaysOfTasks = ({days, cityId}) => {
 
 const getByCityIdForNumOfDaysGrouped = function(req, res, next) {
   console.log(req.query, req.params);
-  const stars = req.query['stars'] && parseInt(req.query['stars']);
+  const stars = req.query['stars'] && req.query['stars'].split(',');
+  console.log(stars);
   const filter = ()=> {
     if (stars) {
+      const firstStar = parseInt(stars[0]);
+      const lastStar = parseInt(stars[stars.length-1]);
       return function(hotel) {
-        return hotel('cityId').eq(req.params.cityId).and(hotel('starRating').ge(stars).and(hotel('starRating').lt(stars + 1)))
+        return hotel('cityId').eq(req.params.cityId).and(hotel('starRating').ge(firstStar).and(hotel('starRating').lt(firstStar + 1)))
       }
     } else {
       return function(hotel) {
@@ -83,6 +86,7 @@ const getByCityIdForNumOfDaysGrouped = function(req, res, next) {
       }
     }).run(req._rdbConn).then((data)=> {
       res.send(data)
+
     }).catch((err)=> {
       next(err)
     }).finally(next)

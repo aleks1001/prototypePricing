@@ -59,9 +59,9 @@ const getByHotelIdForDays = (req, res, next)=> {
       return {
         'checkIn': hotel('checkIn'),
         'minHotelPrice': 0,
-        'maxHotelPrice': hotel('price'),
-        'maxRecHotelPrice': 0,
-        'micRecHotelPrice': 0
+        'maxHotelPrice': hotel('price').round(),
+        'maxReqHotelPrice': 0,
+        'minReqHotelPrice': 0
       }
     }).coerceTo('array').run(req._rdbConn).then((data)=> {
       res.send(data)
